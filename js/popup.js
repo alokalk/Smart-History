@@ -57,7 +57,7 @@ function FillUpHistory(historyObject, parentDomId)
             let id = parentDomId.id + i;
             i++;
             parentDomId.innerHTML += `
-            <a class="btn btn-outline-primary rounded-0 text-left btn-block result-title" data-toggle="collapse" href="#${id}" role="button" aria-expanded="false" aria-controls="collapseExample" style="margin-top:2px;">
+            <a class="btn btn-outline-secondary rounded-0 text-left btn-block result-title" data-toggle="collapse" href="#${id}" role="button" aria-expanded="false" aria-controls="collapseExample" style="margin-top:2px;">
                 ${hostName}
             </a>
             <div class="collapse" id="${id}">
@@ -87,7 +87,7 @@ function FillUpHistory(historyObject, parentDomId)
                         <div class="title-text">${historyArray[i].title}</div>
                         <div><a href="${url}" data-toggle="tooltip" title="${url}" class="url-text">${url}</a></div>
                         </div>
-                        <div class="col-2 time-text-parent">
+                        <div class="col-2 time-text-parent text-right">
                         <span class="time-text">${dateString}</span>
                         </div>
                     </div>
@@ -183,20 +183,28 @@ function UpdateSearchBox()
     {
         let result = JSON.parse($(resultBlocks[i]).text());
         let searchResultHtml = `
-                    <div class="row">
-                        <div class="col-1">
-                        <img src="${result.faviconUrl}" class="favicon">
-                        </div>
-                        <div class="col-8">
-                        <div class="title-text">${result.title}</div>
-                        <div><a href="${result.url}" data-toggle="tooltip" title="${result.url}" class="url-text">${result.url}</a></div>
-                        </div>
-                        <div class="col-2 time-text-parent">
-                        <span class="time-text">${GetDateStringFromTimeStamp(result.timeStamp)}</span>
-                        </div>
-                    </div>
-                    `;
-        $("#searchResults").html($("#searchResults").html() + searchResultHtml + "<hr>");
+        <div class="card rounded-0" id="searchCard${i}" style="margin-bottom: 2px;">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-1">
+                    <img src="${result.faviconUrl}" class="favicon">
+                </div>
+                <div class="col-11">
+                    <div class="title-text">${result.title}</div>
+                    <div><a href="${result.url}" data-toggle="tooltip" title="${result.url}" id="searchResult${i}" class="url-text">${result.url}</a></div>
+                </div>
+            </div>
+        </div>
+        </div>
+        `
+        $("#searchResults").html($("#searchResults").html() + searchResultHtml);
+    }
+    for (let i = 0; i < resultBlocks.length; ++i)
+    {
+        $("#searchCard"+i).on('click', '> *' , function(){
+            console.log("here");
+            $("#searchResult"+i)[0].click();
+        });
     }
     if (resultBlocks.length == 0)
     {
