@@ -10,86 +10,149 @@ let browserWrapper = browser;
 // var browserWrapper = chrome;
 
 let c_historySotageId = "HistoryItems";
+let c_treeStorageId = "TreeItems";
 let c_id = "Id";
+let c_treeId = "TreeId";
 
 class ExtensionState
 {
-    static CreateNewId()
+    static CreateNewIdHelper(idString)
     {
-        let lastId = localStorage.getItem(c_id);
+        let lastId = localStorage.getItem(idString);
         if (lastId == null)
         {
             lastId = -1;
         }
         lastId++;
-        localStorage.setItem(c_id, lastId);
+        localStorage.setItem(idString, lastId);
         return lastId;
     }
 
-    static GetAllHistoryItems()
+    static CreateNewId()
     {
-        let historyItems = localStorage.getItem(c_historySotageId);
-        if (historyItems == null)
-        {
-            return [];
-        };
-        historyItems = "[" + historyItems + "]";
-        historyItems = JSON.parse(historyItems);
-        return historyItems;
+        return ExtensionState.CreateNewIdHelper(c_id);
     }
 
-    static AddToHistoryList(historyItem)
+    static CreateNewTreeId()
     {
-        let historyItems = ExtensionState.GetAllHistoryItems();
-        historyItems.push(historyItem);
-
-        for (let i = 0; i < historyItems.length; ++i)
-        {
-            historyItems[i] = JSON.stringify(historyItems[i]);
-        }
-
-        localStorage.setItem(c_historySotageId, historyItems);
-    }
-
-    static PrintAllItemsLog()
-    {
-        let historyItems = ExtensionState.GetAllHistoryItems();
-        for (let i = historyItems.length - 1; i >= 0; --i)
-        {
-            console.log(historyItems[i]);
-        }
-    }
-
-    static PrintAllItems()
-    {
-        console.table(ExtensionState.GetAllHistoryItems(), ["id", "url"]);
+        return ExtensionState.CreateNewIdHelper(c_treeId);
     }
 }
 
 class HistoryItem
 {
-    constructor(title, url, parentId, faviconUrl, timeStamp)
+    constructor(title, url, parentId, faviconUrl, treeId)
     {
         this.title = title;
         this.id = ExtensionState.CreateNewId();
         this.parentId = parentId;
         this.url = url;
-        this.timeStamp = timeStamp;
+        this.timeStamp = Date.now();
         this.hostname = ExtractHostname(url);
         this.faviconUrl = faviconUrl;
-        console.log(faviconUrl);
+        this.treeId = treeId;
     }
 }
 
-function ExtractHostname(url) {
-    console.log(url);
+class TreeItem
+{
+    constructor(hostname, searchString)
+    {
+        this.id = ExtensionState.CreateNewTreeId();
+        this.hostname = hostname;
+        this.timeStamp = Date.now();
+        this.UpdateWithSearchString(searchString);
+    }
+
+    UpdateWithSearchString(searchString)
+    {
+        this.searchString = searchString;
+        this.isSearchEngine = !((searchString == null) || (searchString.length == 0));
+        if (this.isSearchEngine)
+        {
+            if (this.hostname == "www.google.com")
+            {
+                this.searchEngine = "Google";
+            }
+            else if (this.hostname == "www.bing.com")
+            {
+                this.searchEngine = "Bing";
+            }
+        }
+    }
+}
+
+class HistoryItemList
+{
+    constructor()
+    {
+        let historyItems = localStorage.getItem(c_historySotageId);
+        if (historyItems == null)
+        {
+            historyItems = "{}";
+        }
+        this.items = JSON.parse(historyItems);
+    }
+
+    AddOrupdateItems(historyItem)
+    {
+        this.items[historyItem.id] = historyItem;
+        this.Update();
+    }
+
+    GetItemWithId(id)
+    {
+        return this.items[id];
+    }
+
+    Update()
+    {
+        localStorage.setItem(c_historySotageId, JSON.stringify(this.items));
+    }
+}
+
+class TreeItemList
+{
+    constructor()
+    {
+        let treeItems = localStorage.getItem(c_treeStorageId);
+        if (treeItems == null)
+        {
+            treeItems = "{}";
+        }
+        this.items = JSON.parse(treeItems);
+    }
+
+    AddOrupdateItems(treeItem)
+    {
+        this.items[treeItem.id] = treeItem;
+        this.Update();
+    }
+
+    GetItemWithId(id)
+    {
+        return this.items[id];
+    }
+
+    Update()
+    {
+        localStorage.setItem(c_treeStorageId, JSON.stringify(this.items));
+    }
+}
+
+//#region Util Methods
+
+function ExtractHostname(url) 
+{
     var hostname;
     //find & remove protocol (http, ftp, etc.) and get hostname
 
-    if (url.indexOf("://") > -1) {
+    if (url.indexOf("://") > -1)
+    {
         hostname = url.split('/')[2];
     }
-    else {
+    else
+    {
         hostname = url.split('/')[0];
     }
 
@@ -102,3 +165,70 @@ function ExtractHostname(url) {
 
     return hostname;
 }
+
+function FlattenObjectToValueArray(obj)
+{
+    let arr = [];
+    for (var id in obj)
+    {
+        if (obj.hasOwnProperty(id))
+        {
+            arr.push(obj[id]);
+        }
+    }
+    return arr;
+}
+
+function GetDateStringFromTimeStamp(timeStamp)
+{
+    let currentDate = new Date();
+    let currentTimeInMillis = currentDate.getTime();
+    let date = new Date(timeStamp);
+    let dateString = "";
+    if (Math.ceil((currentTimeInMillis - timeStamp) / 3600000) <= 24)
+    {
+        dateString = date.getHours() % 12;
+        if ((date.getHours() % 12) < 10)
+        {
+            dateString = "0" + dateString;
+        }
+        dateString += ":";
+        if (date.getMinutes() < 10)
+        {
+            dateString += "0";
+        }
+        dateString += date.getMinutes() + " ";
+        if (date.getHours() < 12)
+        {
+            dateString += "A.M";
+        }
+        else
+        {
+            dateString += "P.M";
+        }
+    }
+    else
+    {
+        dateString = date.getDate() + "-" + date.getMonth() + "-" + date.getFullYear();
+    }
+    return dateString;
+}
+
+//#endregion
+
+$.scrollbarWidth = function ()
+{
+    var parent, child, width;
+
+    if (width === undefined)
+    {
+        parent = $('<div style="width:50px;height:50px;overflow:auto"><div/></div>').appendTo('body');
+        child = parent.children();
+        width = child.innerWidth() - child.height(99).innerWidth();
+        parent.remove();
+    }
+
+    return width;
+};
+
+$('body').css('margin-right', $.scrollbarWidth() + 'px');
